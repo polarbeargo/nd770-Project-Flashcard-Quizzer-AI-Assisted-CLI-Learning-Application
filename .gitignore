@@ -1,0 +1,23 @@
+*.pyc
+__pycache__/
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Runtime artefacts
+*.log
+data/tasks.json
+.tmp-*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+
+mutants/
