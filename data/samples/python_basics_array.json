@@ -1,0 +1,29 @@
+[
+  {
+    "front": "What keyword defines a function in Python?",
+    "back": "def",
+    "tags": ["syntax", "functions"]
+  },
+  {
+    "front": "Which built-in type is an immutable, ordered sequence?",
+    "back": "tuple",
+    "hint": "Round brackets.",
+    "tags": ["types"]
+  },
+  {
+    "front": "What does `len()` return for an empty list?",
+    "back": "0",
+    "tags": ["builtins"]
+  },
+  {
+    "front": "Which statement is used to handle exceptions?",
+    "back": "try / except",
+    "tags": ["errors"]
+  },
+  {
+    "front": "What is the result of `3 // 2`?",
+    "back": "1",
+    "hint": "Floor division.",
+    "tags": ["operators"]
+  }
+]

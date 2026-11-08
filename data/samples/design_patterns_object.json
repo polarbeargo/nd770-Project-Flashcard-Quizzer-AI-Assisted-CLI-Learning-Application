@@ -1,0 +1,32 @@
+{
+  "title": "Design Patterns",
+  "description": "Gang-of-Four patterns used in this project.",
+  "cards": [
+    {
+      "front": "Which pattern lets you swap algorithms at runtime behind one interface?",
+      "back": "Strategy",
+      "tags": ["behavioural"]
+    },
+    {
+      "front": "Which pattern passes a request along a chain until one handler accepts it?",
+      "back": "Chain of Responsibility",
+      "tags": ["behavioural"]
+    },
+    {
+      "front": "Which pattern centralises object creation behind a name or key?",
+      "back": "Factory",
+      "tags": ["creational"]
+    },
+    {
+      "front": "Which pattern notifies many listeners when something happens?",
+      "back": "Observer",
+      "hint": "Publish / subscribe.",
+      "tags": ["behavioural"]
+    },
+    {
+      "front": "Which pattern offers one simple entry point over a complex subsystem?",
+      "back": "Facade",
+      "tags": ["structural"]
+    }
+  ]
+}

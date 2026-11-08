@@ -1,0 +1,7 @@
+[
+  {"front": "Valid card", "back": "yes"},
+  {"front": "Missing back"},
+  {"front": "Valid card", "back": "yes"},
+  {"front": 42, "back": "front is a number"},
+  {"front": "Another valid card", "back": "also yes"}
+]
