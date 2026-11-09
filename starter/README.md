@@ -1,12 +1,29 @@
-# AI-Assisted Development Project Starter
+# Flashcard Quizzer - AI-Assisted CLI Learning Application
 
-This is a Python project template for learning AI-assisted software development. You will build upon this foundation to create a functional application while collaborating with AI coding assistants to apply software engineering best practices including design patterns, separation of concerns, test-driven development, and comprehensive documentation.
+A command-line tool that **loads, validates and exports flashcard decks** stored
+as JSON. It was built with an AI coding assistant as part of an AI-assisted
+software-engineering project; the collaboration process is documented in
+[`docs/ai_edit_log.md`](docs/ai_edit_log.md) and the design in
+[`docs/architecture.md`](docs/architecture.md).
+
+## ✨ Features
+
+| Feature | Details |
+|---------|---------|
+| **Two JSON layouts** | Array format `[{"front": "...", "back": "..."}]` and object format `{"title": "...", "cards": [...]}` - detected automatically. |
+| **Friendly errors, never tracebacks** | Malformed JSON (with line/column), missing or mistyped fields, empty decks, oversized input, unreachable URLs - each gets a one-line message plus a *hint*. |
+| **Strict or lenient validation** | Stop at the first bad card (default) or `--skip-invalid` to drop bad cards with warnings. Exact duplicates are removed unless `--keep-duplicates`. |
+| **Configuration management** | Defaults → `--config file.json` → `FLASHCARD_*` env vars → CLI flags. Every value validated up-front. |
+| **Export** | JSON, CSV (formula-injection safe) and Markdown, written atomically. Custom exporters plug in via a factory. |
+| **Remote decks** | `python main.py validate https://example.com/deck.json` - http(s) only, timeout and size-capped. |
+| **Logging** | `--debug` / `--log-file`; the library itself is silent unless you opt in. |
+| **Thread-safe & leak-free** | Immutable models, locked LRU cache, observer subscriptions with explicit teardown - all covered by concurrency and `tracemalloc` tests. |
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.10 or higher (frozen `slots=True` dataclasses are used)
 - pip (Python package manager)
 - Git
 
@@ -25,7 +42,7 @@ This is a Python project template for learning AI-assisted software development.
 
 3. **Run the application:**
    ```bash
-   python main.py
+   python main.py validate data/samples/python_basics_array.json
    ```
 
 4. **Run tests:**
@@ -33,7 +50,109 @@ This is a Python project template for learning AI-assisted software development.
    python -m pytest
    ```
 
-### 🛠️ Development Tools
+
+## 📖 Usage
+
+```bash
+# Validate a deck (array or object format is detected automatically)
+python main.py validate data/samples/python_basics_array.json
+python main.py validate data/samples/design_patterns_object.json
+
+# Print the cards
+python main.py show data/samples/design_patterns_object.json --limit 3
+
+# Tolerate bad cards, see what was skipped
+python main.py validate data/samples/invalid_missing_fields.json --skip-invalid
+
+# Export to CSV / Markdown / JSON (format inferred from extension, or --format)
+python main.py export data/samples/python_basics_array.json deck.csv
+python main.py export data/samples/python_basics_array.json deck.md
+
+# Load from the web
+python main.py validate https://example.com/deck.json
+
+# Diagnostics
+python main.py validate deck.json --debug
+python main.py validate deck.json --log-file run.log
+
+# List supported formats
+python main.py formats
+```
+
+### What errors look like
+
+```text
+$ python main.py validate data/samples/invalid_malformed.json
+Error: In 'data/samples/invalid_malformed.json': Not valid JSON: Expecting ',' delimiter (line 2, column 29).
+  Hint: Look for missing commas, unmatched brackets/braces, trailing commas, or unquoted keys. ...
+
+$ python main.py validate data/samples/invalid_missing_fields.json
+Error: In 'data/samples/invalid_missing_fields.json': Card #2 is missing the required 'back' field.
+  Hint: Every card needs non-empty string "front" and "back" fields. Optional: "hint" (string) and "tags" (list of strings).
+```
+
+Exit codes: `0` success · `1` user-facing problem · `2` unexpected bug (logged) · `130` interrupted.
+
+### Deck file format
+
+```jsonc
+// Array format
+[
+  {"front": "What keyword defines a function?", "back": "def", "tags": ["syntax"]},
+  {"front": "What is 3 // 2?", "back": "1", "hint": "Floor division."}
+]
+
+// Object format
+{
+  "title": "Python Basics",
+  "cards": [ {"front": "...", "back": "..."} ]
+}
+```
+
+`front` and `back` are required non-empty strings. `hint` (string) and `tags`
+(list of strings) are optional. Unknown keys are ignored.
+
+### Configuration
+
+| Option | Default | Env var | Purpose |
+|--------|---------|---------|---------|
+| `max_file_bytes` | 10 MiB | `FLASHCARD_MAX_FILE_BYTES` | Reject larger inputs before reading |
+| `max_cards` | 10000 | `FLASHCARD_MAX_CARDS` | Reject bigger decks |
+| `max_field_length` | 2000 | `FLASHCARD_MAX_FIELD_LENGTH` | Per-field character limit |
+| `max_tags` / `max_tag_length` | 20 / 50 | `FLASHCARD_MAX_TAGS` / `FLASHCARD_MAX_TAG_LENGTH` | Tag limits |
+| `on_invalid_card` | `raise` | `FLASHCARD_ON_INVALID_CARD` | `raise` or `skip` |
+| `dedupe` | `true` | `FLASHCARD_DEDUPE` | Remove exact duplicates |
+| `allow_empty` | `false` | `FLASHCARD_ALLOW_EMPTY` | Accept zero-card decks |
+| `encoding` | `utf-8` | `FLASHCARD_ENCODING` | File encoding |
+| `cache_size` | 8 | `FLASHCARD_CACHE_SIZE` | Parsed-file LRU cache (0 disables) |
+| `request_timeout` | 10.0 | `FLASHCARD_REQUEST_TIMEOUT` | HTTP timeout in seconds |
+
+Put the same keys in a JSON file and pass `--config settings.json`.
+
+### Using the library directly
+
+```python
+from flashcards import FlashcardLoader, LoaderConfig, FlashcardError, export_deck
+
+loader = FlashcardLoader(LoaderConfig(on_invalid_card="skip"))
+try:
+    deck = loader.load("data/samples/python_basics_array.json")
+except FlashcardError as exc:
+    print(exc.user_message())
+else:
+    print(len(deck), "cards;", deck.skipped, "skipped")
+    export_deck(deck, "out.csv")
+```
+
+## 🏗️ Architecture
+
+Strategy + Chain of Responsibility (format parsers), Factory (exporters),
+Observer (load events), Facade (`FlashcardLoader`) and immutable value objects
+(`LoaderConfig`, `Flashcard`, `Deck`). Diagrams, the load pipeline, and the
+performance / security / thread-safety decisions are in
+[`docs/architecture.md`](docs/architecture.md).
+
+## 🛠️ Development Tools
 
 #### Code Quality Tools
 
@@ -70,39 +189,63 @@ Set up pre-commit hooks for automatic code quality checks:
 pre-commit install
 ```
 
-## Testing
+## 🧪 Testing
 
-The project includes comprehensive unit tests demonstrating proper testing practices for AI-assisted development.
+380 tests, **99 % line + branch coverage** (`fail_under = 90` is enforced in
+`pyproject.toml`), and **mutation-tested** so the coverage number means something:
+every non-cosmetic mutant of the loader, validator, exporters, remote fetcher
+and CLI is killed by at least one test (see *Mutation testing* below).
 
-### Tests Break Down
-
-**TaskManager Tests (`test_task_manager.py`):**
-- `test_add_task_returns_id()` - Verifies task creation returns valid ID
-- `test_get_task_by_id()` - Tests task retrieval with proper data structure
-- `test_complete_task()` - Validates task completion with timestamps
-- `test_delete_task()` - Ensures proper task deletion and error handling
-- `test_get_nonexistent_task_raises_error()` - Tests error handling for invalid IDs
-
-**FileHandler Tests (`test_file_handler.py`):**
-- `test_save_data_creates_file()` - Verifies JSON file creation and content
-- `test_load_nonexistent_file_returns_empty_dict()` - Tests graceful error handling
-- `test_file_exists()` - Validates file existence checking
-- `test_delete_file()` - Tests file cleanup functionality
-- `test_list_files()` - Verifies directory listing capabilities
+| File | Covers |
+|------|--------|
+| `tests/test_models.py` | Immutability, slots, serialisation of `Flashcard`/`Deck` |
+| `tests/test_exceptions.py` | Message/hint formatting, hierarchy |
+| `tests/test_config.py` | Validation of every option, env/file/mapping loading |
+| `tests/test_parsers.py` | Array/object detection, bad layouts, custom strategies |
+| `tests/test_validators.py` | Required/optional fields, types, lengths, control chars, Unicode |
+| `tests/test_loader.py` | Both formats, every error path, skip/dedupe, LRU cache |
+| `tests/test_remote.py` | HTTP fetcher with an injected fake opener (no network) |
+| `tests/test_exporters.py` | JSON/CSV/Markdown output, factory, atomic writes, temp cleanup |
+| `tests/test_logging_config.py` | Handler idempotency |
+| `tests/test_cli.py` | End-to-end CLI: every command, flag and failure mode |
+| `tests/test_concurrency.py` | 16-thread loads, event bus races, cache bounds, `tracemalloc` leak check |
+| `tests/test_task_manager.py`, `tests/test_file_handler.py` | Original starter utilities |
 
 ```bash
 # Run all tests
-pytest
+python -m pytest
 
-# Run with coverage report (aim for >80% coverage)
-python -m pytest --cov=. --cov-report=html
+# Coverage report (terminal + HTML in htmlcov/)
+python -m pytest --cov --cov-report=term-missing --cov-report=html
 
-# Run specific test file with verbose output
-python -m pytest tests/test_task_manager.py -v
+# One file, verbose
+python -m pytest tests/test_loader.py -v
 
-# Run all quality checks
-black . && isort . && flake8 . && mypy . && pytest
+# All quality checks
+black --check . && isort --check-only . && flake8 . && mypy && python -m pytest --cov
 ```
+
+### Mutation testing (guarding against "test theater")
+
+High coverage only proves lines were *executed*, not that a test would fail if
+the code were wrong. [mutmut](https://mutmut.readthedocs.io/) rewrites the
+source one small change at a time (`>` → `>=`, `+= 1` → `= 1`, dropping an
+argument, ...) and re-runs the suite; a mutant that *survives* marks a
+behaviour no test actually checks.
+
+```bash
+pip install mutmut
+mutmut run            # configured in pyproject.toml [tool.mutmut]
+mutmut results        # list survivors
+mutmut show <id>      # diff of one mutant
+```
+
+Running this on the first version of the suite exposed four tautological
+assertions and ~30 unverified behaviours (boundary conditions, config
+propagation, error metadata, log levels) despite 99 % coverage. Tests were
+added for each; see `docs/ai_edit_log.md` for the full account. The remaining
+survivors are cosmetic (help-text wording, message capitalisation) or
+provably equivalent.
 
 ## Project Instructions
 
@@ -171,30 +314,34 @@ Your project will be evaluated on:
 ### Project Structure
 
 ```
-starter/
-├── main.py                 # Main application entry point
-├── utils/                  # Utility modules
-│   ├── __init__.py
-│   ├── task_manager.py     # Task management functionality
-│   └── file_handler.py     # File I/O operations
-├── tests/                  # Unit test suite
-│   ├── __init__.py
-│   ├── test_task_manager.py
-│   └── test_file_handler.py
-├── docs/                   # Documentation and templates
-│   ├── ai_edit_log.md      # AI interaction tracking
-│   ├── design_patterns.md  # Design pattern examples
-│   └── report_template.md  # Final report template
-├── ai_guidance/            # AI prompting best practices
-│   ├── prompting_best_practices.md
-│   └── code_review_checklist.md
-├── .claude/                # Claude-specific configuration
-│   ├── CLAUDE.md           # Claude configuration
-│   ├── commands/           # Slash commands
-│   └── mcp.json           # MCP configuration
-├── requirements.txt        # Python dependencies
-├── .editorconfig          # Code formatting rules
-└── README.md              # This file
+.
+├── main.py                   # CLI: validate / show / export / formats
+├── flashcards/               # Library package
+│   ├── __init__.py           # Public API
+│   ├── models.py             # Flashcard, Deck (frozen, slotted)
+│   ├── exceptions.py         # Friendly error hierarchy
+│   ├── config.py             # LoaderConfig (file / env / overrides)
+│   ├── parsers.py            # Format strategies + registry
+│   ├── validators.py         # CardValidator
+│   ├── loader.py             # FlashcardLoader facade + LRU cache
+│   ├── events.py             # EventBus (observer)
+│   ├── exporters.py          # Exporter factory, atomic export
+│   ├── remote.py             # HTTP(S) fetch
+│   └── logging_config.py     # Opt-in logging
+├── utils/                    # Original starter utilities (TaskManager, FileHandler)
+├── data/samples/             # Example decks, incl. deliberately broken ones
+├── tests/                    # pytest suite (see Testing)
+├── docs/
+│   ├── architecture.md       # Diagrams + design decisions
+│   ├── ai_edit_log.md        # AI interaction log
+│   ├── design_patterns.md    # Pattern guide (course material)
+│   ├── project_rubric.md     # Assessment rubric
+│   └── report_template.md    # Final report template
+├── ai_guidance/              # Prompting and review checklists
+├── pyproject.toml            # pytest / coverage / black / isort / mypy config
+├── .flake8
+├── requirements.txt
+└── README.md
 ```
 
 ## Built With

@@ -1,6 +1,8 @@
 # Virtual environment
 venv/
 env/
+.venv/
+mutants/
 
 # Python cache
 __pycache__/
@@ -12,9 +14,6 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Data files
-data/
-
 # IDE
 .vscode/
 .idea/
@@ -25,3 +24,5 @@ Thumbs.db
 
 # Logs
 *.log
+coverage.xml
+.tmp-*
