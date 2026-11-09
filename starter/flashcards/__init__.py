@@ -33,6 +33,15 @@ from .exporters import ExporterFactory, export_deck
 from .loader import FlashcardLoader
 from .models import Deck, Flashcard
 from .parsers import ArrayFormatParser, ObjectFormatParser, ParserRegistry
+from .quiz import (
+    AdaptiveMode,
+    QuizMode,
+    QuizModeFactory,
+    QuizResult,
+    QuizSession,
+    RandomMode,
+    SequentialMode,
+)
 from .validators import CardValidator
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -41,6 +50,7 @@ __version__ = "1.0.0"
 
 __all__ = [
     "ArrayFormatParser",
+    "AdaptiveMode",
     "CardValidator",
     "CollectingObserver",
     "ConfigError",
@@ -62,7 +72,13 @@ __all__ = [
     "MalformedJSONError",
     "ObjectFormatParser",
     "ParserRegistry",
+    "QuizMode",
+    "QuizModeFactory",
+    "QuizResult",
+    "QuizSession",
+    "RandomMode",
     "RemoteFetchError",
+    "SequentialMode",
     "UnsupportedFormatError",
     "export_deck",
     "log_event",
