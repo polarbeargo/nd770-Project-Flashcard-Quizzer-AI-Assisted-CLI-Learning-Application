@@ -228,6 +228,56 @@ For each AI interaction, create a new entry with the following structure:
 
 ---
 
+### 2026-11-09 - Quiz strategies and interactive session
+
+**Context:** Add a quiz engine to the existing validated-deck CLI without
+duplicating JSON parsing, and meet the requested sequential, random and
+adaptive ordering behaviors.
+
+**AI Tool Used:** GitHub Copilot (agent mode)
+
+**Prompt/Request:** "Implement Phase 2's quiz engine with a `QuizMode` abstract
+base class, `SequentialMode`, `RandomMode`, `AdaptiveMode`, and a factory;
+reuse the JSON loader, compare answers case-insensitively, show immediate
+feedback and finish with total questions, accuracy and missed terms. Keep it
+efficient, reliable and thread-safe, and ensure the tests verify real behavior."
+
+**AI Response:** Added a quiz strategy module and connected it to the existing
+`quiz` CLI command. Adaptive mode asks each card once, then retries incorrect
+cards until correct. A `q` command and end-of-input allow a user to stop a
+review early; statistics include all submitted attempts, including retries.
+
+**Changes Made:**
+- Kept question-order state inside each strategy instance and made the factory
+  create a new instance per quiz. Random mode owns its RNG and shuffles a copy
+  rather than mutating the shared immutable deck.
+- Added an injectable answer reader and output stream so tests can verify
+  prompts, feedback, adaptive reordering, early exit and the exact summary.
+- The first test run exposed that two test answer iterators assumed a
+  two-card deck while their fixture had three cards. Updated the test data and
+  expected totals to match the actual fixture; no production behavior was
+  weakened to make the tests pass.
+- Documented that an adaptive retry is not counted until an answer is
+  submitted, and that missed terms remain listed even if later corrected.
+
+**Reasoning:** A strategy interface keeps the quiz loop independent of ordering
+rules. A per-quiz strategy avoids shared mutable state between normal concurrent
+sessions, and a private seeded RNG makes random behavior reproducible in tests.
+Using `FlashcardLoader` preserves the app's established validation and friendly
+error path instead of creating a second loader.
+
+**Outcome:** Added tests for each mode, factory selection, normalization,
+adaptive retries, score calculation, empty/early-ended sessions and CLI
+integration. The focused tests passed; the full suite passed with 405 tests and
+99.42% coverage. Black, isort, flake8 and mypy were also run.
+
+**Lessons Learned:** A high coverage percentage alone would not have caught the
+test fixture mismatch; checking the exact attempt order and summary values
+made the tests meaningful. Mutable strategies should be session-scoped, while
+the immutable deck can safely be reused.
+
+---
+
 ## Tips for Effective AI Collaboration
 
 ### 1. Be Specific in Your Requests
