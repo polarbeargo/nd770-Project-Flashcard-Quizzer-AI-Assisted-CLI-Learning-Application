@@ -5,6 +5,7 @@ Usage examples::
 
     python main.py validate data/samples/python_basics_array.json
     python main.py show data/samples/python_basics_object.json --limit 3
+    python main.py quiz data/samples/python_basics_array.json --mode adaptive
     python main.py export deck.json deck.csv
     python main.py formats
 
@@ -25,6 +26,8 @@ from flashcards import (
     FlashcardLoader,
     LoaderConfig,
     LoadEvent,
+    QuizModeFactory,
+    QuizSession,
     export_deck,
     log_event,
 )
@@ -76,7 +79,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(
         prog="main.py",
-        description="Load, validate and export flashcard decks.",
+        description="Load, validate, quiz and export flashcard decks.",
     )
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
     sub.required = True
@@ -108,6 +111,15 @@ def build_parser() -> argparse.ArgumentParser:
         "-f",
         choices=DEFAULT_FACTORY.available(),
         help="Explicit output format (overrides the file extension).",
+    )
+
+    quiz = sub.add_parser("quiz", parents=[common], help="Study a deck interactively.")
+    quiz.add_argument("source", help="Path or http(s) URL of a JSON deck.")
+    quiz.add_argument(
+        "--mode",
+        choices=QuizModeFactory.available(),
+        default="sequential",
+        help="Question order strategy (default: sequential).",
     )
 
     sub.add_parser("formats", help="List supported input and export formats.")
@@ -200,6 +212,13 @@ def cmd_export(args: argparse.Namespace, loader: FlashcardLoader, out: TextIO) -
     return EXIT_OK
 
 
+def cmd_quiz(args: argparse.Namespace, loader: FlashcardLoader, out: TextIO) -> int:
+    deck = loader.load(args.source)
+    mode = QuizModeFactory.create(args.mode)
+    QuizSession(deck, mode).run(out=out)
+    return EXIT_OK
+
+
 def cmd_formats(out: TextIO) -> int:
     print("Input formats (JSON):", file=out)
     print('  array   [{"front": "...", "back": "..."}, ...]', file=out)
@@ -217,6 +236,7 @@ COMMANDS: Dict[str, Callable[[argparse.Namespace, FlashcardLoader, TextIO], int]
     "validate": cmd_validate,
     "show": cmd_show,
     "export": cmd_export,
+    "quiz": cmd_quiz,
 }
 
 
