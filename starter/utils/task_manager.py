@@ -6,19 +6,35 @@ that students can extend with AI assistance.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TypedDict
+
+
+class Task(TypedDict):
+    """Fields shared by every task."""
+
+    id: int
+    description: str
+    priority: str
+    completed: bool
+    created_at: str
+
+
+class TaskWithCompletion(Task, total=False):
+    """Task fields added after a task is completed."""
+
+    completed_at: str
 
 
 class TaskManager:
     """A simple task management system for demonstration purposes."""
 
-    def __init__(self):
-        self._tasks: List[Dict[str, Any]] = []
+    def __init__(self) -> None:
+        self._tasks: List[TaskWithCompletion] = []
         self._next_id = 1
 
     def add_task(self, description: str, priority: str = "medium") -> int:
         """Add a new task and return its ID."""
-        task = {
+        task: TaskWithCompletion = {
             "id": self._next_id,
             "description": description,
             "priority": priority,
@@ -29,14 +45,14 @@ class TaskManager:
         self._next_id += 1
         return task["id"]
 
-    def get_task(self, task_id: int) -> Dict[str, Any]:
+    def get_task(self, task_id: int) -> TaskWithCompletion:
         """Get a specific task by ID."""
         for task in self._tasks:
             if task["id"] == task_id:
                 return task
         raise ValueError(f"Task with ID {task_id} not found")
 
-    def get_all_tasks(self) -> List[Dict[str, Any]]:
+    def get_all_tasks(self) -> List[TaskWithCompletion]:
         """Get all tasks."""
         return self._tasks.copy()
 
