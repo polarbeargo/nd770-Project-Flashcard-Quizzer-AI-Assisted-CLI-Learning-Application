@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import io
 import json
 import logging
@@ -156,6 +157,107 @@ class TestExport:
         path = write_json(ARRAY_DECK)
         with pytest.raises(SystemExit) as info:
             run_cli("export", str(path), str(tmp_path / "o.json"), "--format", "xml")
+        assert info.value.code == 2
+
+
+class TestQuiz:
+    def test_quiz_command_uses_sequential_mode_by_default(
+        self, write_json, monkeypatch
+    ):
+        path = write_json(ARRAY_DECK)
+        answers = iter(("a1", "a2"))
+        monkeypatch.setattr(builtins, "input", lambda: next(answers))
+
+        code, out, err = run_cli("quiz", str(path))
+
+        assert code == main.EXIT_OK
+        assert err == ""
+        assert "(2 cards; sequential mode)" in out
+        assert "| Total questions answered | 2 |" in out
+        assert "| Accuracy | 100.0% |" in out
+
+    def test_quiz_command_accepts_file_mode_alias_and_stats(
+        self, write_json, monkeypatch
+    ):
+        path = write_json(ARRAY_DECK)
+        answers = iter(("a1", "a2"))
+        monkeypatch.setattr(builtins, "input", lambda: next(answers))
+
+        code, out, err = run_cli("quiz", "-f", str(path), "-m", "sequential", "--stats")
+
+        assert code == main.EXIT_OK
+        assert err == ""
+        assert "(2 cards; sequential mode)" in out
+        assert "| Correct answers | 2 |" in out
+
+    def test_quiz_command_still_accepts_positional_source(
+        self, write_json, monkeypatch
+    ):
+        path = write_json(ARRAY_DECK)
+        answers = iter(("exit",))
+        monkeypatch.setattr(builtins, "input", lambda: next(answers))
+
+        code, out, err = run_cli("quiz", str(path))
+
+        assert code == main.EXIT_OK
+        assert err == ""
+        assert "| Total questions answered | 0 |" in out
+
+    def test_quiz_command_handles_keyboard_interrupt(self, write_json, monkeypatch):
+        path = write_json(ARRAY_DECK)
+
+        def interrupt():
+            raise KeyboardInterrupt
+
+        monkeypatch.setattr(builtins, "input", interrupt)
+        code, out, err = run_cli("quiz", str(path))
+
+        assert code == main.EXIT_OK
+        assert err == ""
+        assert "Quiz interrupted." in out
+        assert "Quiz summary" in out
+        assert "Traceback" not in out
+
+    @pytest.mark.parametrize(
+        ("arguments", "message"),
+        [
+            ((), "A quiz deck is required"),
+            (("deck.json", "-f", "other.json"), "Provide the quiz deck once"),
+        ],
+    )
+    def test_quiz_command_requires_exactly_one_deck_source(self, arguments, message):
+        code, out, err = run_cli("quiz", *arguments)
+        assert code == main.EXIT_USER_ERROR
+        assert out == ""
+        assert message in err
+
+    def test_quiz_command_uses_selected_mode_and_retries_misses(
+        self, write_json, monkeypatch
+    ):
+        path = write_json(ARRAY_DECK)
+        answers = iter(("wrong", "a2", "a1"))
+        monkeypatch.setattr(builtins, "input", lambda: next(answers))
+
+        code, out, err = run_cli("quiz", str(path), "--mode", "adaptive")
+
+        assert code == main.EXIT_OK
+        assert err == ""
+        assert "(2 cards; adaptive mode)" in out
+        assert out.count("Question ") == 3
+        assert "| Missed terms | Q1 |" in out
+
+    def test_quiz_command_reports_loader_errors_without_traceback(self, write_json):
+        path = write_json("[{oops}]")
+        code, out, err = run_cli("quiz", str(path))
+        assert code == main.EXIT_USER_ERROR
+        assert out == ""
+        assert "Not valid JSON" in err
+        assert "Traceback" not in err
+
+    def test_quiz_command_rejects_unknown_mode(self, write_json):
+        path = write_json(ARRAY_DECK)
+        with pytest.raises(SystemExit) as info:
+            run_cli("quiz", str(path), "--mode", "other")
         assert info.value.code == 2
 
 

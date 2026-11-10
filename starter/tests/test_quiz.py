@@ -197,6 +197,18 @@ def test_session_can_stop_before_attempting_next_question(deck):
     assert "| Accuracy | 0.0% |" in output.getvalue()
 
 
+def test_session_accepts_exit_to_finish(deck):
+    answers = iter(("a1", "exit"))
+    output = io.StringIO()
+
+    result = QuizSession(deck, SequentialMode()).run(
+        input_fn=lambda: next(answers), out=output
+    )
+
+    assert result.total_questions == 1
+    assert "| Total questions answered | 1 |" in output.getvalue()
+
+
 def test_session_treats_end_of_input_as_early_finish(deck):
     output = io.StringIO()
 
@@ -206,6 +218,56 @@ def test_session_treats_end_of_input_as_early_finish(deck):
     result = QuizSession(deck, SequentialMode()).run(input_fn=end_input, out=output)
     assert result.total_questions == 0
     assert "Quiz summary" in output.getvalue()
+
+
+def test_session_handles_keyboard_interrupt_and_prints_summary(deck):
+    output = io.StringIO()
+
+    def interrupt():
+        raise KeyboardInterrupt
+
+    result = QuizSession(deck, SequentialMode()).run(input_fn=interrupt, out=output)
+    assert result.total_questions == 0
+    assert "Quiz interrupted." in output.getvalue()
+    assert "Quiz summary" in output.getvalue()
+
+
+def test_session_colors_feedback_on_terminal_output(deck, monkeypatch):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+
+    class TerminalOutput(io.StringIO):
+        def isatty(self) -> bool:
+            return True
+
+    answers = iter(("a1", "wrong", "a3"))
+    output = TerminalOutput()
+    QuizSession(deck, SequentialMode()).run(input_fn=lambda: next(answers), out=output)
+
+    assert "\033[32mCorrect!\033[0m" in output.getvalue()
+    assert "\033[31mIncorrect. Correct answer: A2\033[0m" in output.getvalue()
+
+
+def test_session_disables_terminal_colors_when_no_color_is_set(deck, monkeypatch):
+    class TerminalOutput(io.StringIO):
+        def isatty(self) -> bool:
+            return True
+
+    monkeypatch.setenv("NO_COLOR", "")
+    output = TerminalOutput()
+    QuizSession(deck, SequentialMode()).run(input_fn=lambda: "a1", out=output)
+    assert "Correct!" in output.getvalue()
+    assert "\033[" not in output.getvalue()
+
+
+def test_detailed_stats_add_correct_answer_count(deck):
+    answers = iter(("a1", "wrong", "a3"))
+    output = io.StringIO()
+
+    QuizSession(deck, SequentialMode()).run(
+        input_fn=lambda: next(answers), out=output, detailed_stats=True
+    )
+
+    assert "| Correct answers | 2 |" in output.getvalue()
 
 
 def test_session_does_not_schedule_wrong_answer_in_sequential_mode(deck):
