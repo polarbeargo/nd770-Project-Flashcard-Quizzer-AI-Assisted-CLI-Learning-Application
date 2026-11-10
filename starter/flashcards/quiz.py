@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import random
 import sys
 from abc import ABC, abstractmethod
@@ -160,8 +161,9 @@ class QuizSession:
         *,
         input_fn: Optional[Callable[[], str]] = None,
         out: Optional[TextIO] = None,
+        detailed_stats: bool = False,
     ) -> QuizResult:
-        """Ask questions until completion or the user enters ``q``."""
+        """Ask questions until completion or the user requests to exit."""
         output = out if out is not None else sys.stdout
         read_answer = input_fn if input_fn is not None else input
         self._mode.start(self._deck.cards)
@@ -177,21 +179,33 @@ class QuizSession:
         )
         while (card := self._mode.next_card()) is not None:
             print(f"\nQuestion {attempts + 1}: {card.front}", file=output)
-            print("Your answer (or 'q' to finish): ", end="", file=output, flush=True)
+            print(
+                "Your answer (or 'exit' to finish): ",
+                end="",
+                file=output,
+                flush=True,
+            )
             try:
                 answer = read_answer()
             except EOFError:
                 break
-            if answer.strip().casefold() == "q":
+            except KeyboardInterrupt:
+                print("\nQuiz interrupted.", file=output)
+                break
+            if answer.strip().casefold() in ("exit", "q"):
                 break
 
             is_correct = answer.strip().casefold() == card.back.strip().casefold()
             attempts += 1
             if is_correct:
                 correct_answers += 1
-                print("Correct!", file=output)
+                self._print_feedback("Correct!", correct=True, out=output)
             else:
-                print(f"Incorrect. Correct answer: {card.back}", file=output)
+                self._print_feedback(
+                    f"Incorrect. Correct answer: {card.back}",
+                    correct=False,
+                    out=output,
+                )
                 if card.front not in seen_missed_terms:
                     seen_missed_terms.add(card.front)
                     missed_terms.append(card.front)
@@ -202,11 +216,23 @@ class QuizSession:
             correct_answers=correct_answers,
             missed_terms=tuple(missed_terms),
         )
-        self._print_summary(result, output)
+        self._print_summary(result, output, detailed=detailed_stats)
         return result
 
     @staticmethod
-    def _print_summary(result: QuizResult, out: TextIO) -> None:
+    def _print_feedback(message: str, *, correct: bool, out: TextIO) -> None:
+        """Use terminal colors when available; keep redirected output plain."""
+        supports_color = out.isatty() and "NO_COLOR" not in os.environ
+        if supports_color:
+            color = "\033[32m" if correct else "\033[31m"
+            print(f"{color}{message}\033[0m", file=out)
+            return
+        print(message, file=out)
+
+    @staticmethod
+    def _print_summary(
+        result: QuizResult, out: TextIO, *, detailed: bool = False
+    ) -> None:
         """Print the required end-of-quiz metrics as a compact table."""
         missed = ", ".join(result.missed_terms) or "None"
         print("\nQuiz summary", file=out)
@@ -215,3 +241,5 @@ class QuizSession:
         print(f"| Total questions answered | {result.total_questions} |", file=out)
         print(f"| Accuracy | {result.accuracy_percentage:.1f}% |", file=out)
         print(f"| Missed terms | {missed} |", file=out)
+        if detailed:
+            print(f"| Correct answers | {result.correct_answers} |", file=out)

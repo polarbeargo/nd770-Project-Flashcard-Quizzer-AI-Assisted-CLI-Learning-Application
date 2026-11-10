@@ -114,12 +114,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     quiz = sub.add_parser("quiz", parents=[common], help="Study a deck interactively.")
-    quiz.add_argument("source", help="Path or http(s) URL of a JSON deck.")
+    quiz.add_argument(
+        "source",
+        nargs="?",
+        help="Path or http(s) URL of a JSON deck (or use -f/--file).",
+    )
+    quiz.add_argument(
+        "-f",
+        "--file",
+        dest="quiz_file",
+        help="Path or http(s) URL of a JSON deck.",
+    )
     quiz.add_argument(
         "--mode",
+        "-m",
         choices=QuizModeFactory.available(),
         default="sequential",
         help="Question order strategy (default: sequential).",
+    )
+    quiz.add_argument(
+        "--stats",
+        action="store_true",
+        help="Include the correct-answer count in the required summary table.",
     )
 
     sub.add_parser("formats", help="List supported input and export formats.")
@@ -213,9 +229,14 @@ def cmd_export(args: argparse.Namespace, loader: FlashcardLoader, out: TextIO) -
 
 
 def cmd_quiz(args: argparse.Namespace, loader: FlashcardLoader, out: TextIO) -> int:
-    deck = loader.load(args.source)
+    if args.source and args.quiz_file:
+        raise FlashcardError("Provide the quiz deck once, either as a path or with -f.")
+    source = args.quiz_file or args.source
+    if not source:
+        raise FlashcardError("A quiz deck is required; provide a path or use -f FILE.")
+    deck = loader.load(source)
     mode = QuizModeFactory.create(args.mode)
-    QuizSession(deck, mode).run(out=out)
+    QuizSession(deck, mode).run(out=out, detailed_stats=args.stats)
     return EXIT_OK
 
 
