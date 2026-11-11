@@ -17,9 +17,21 @@ class FileHandler:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(exist_ok=True)
 
+    def _resolve_path(self, filename: str) -> Path:
+        """Resolve a filename and reject paths that escape the data directory."""
+        root = self.data_dir.resolve()
+        filepath = (root / filename).resolve()
+        try:
+            filepath.relative_to(root)
+        except ValueError:
+            raise ValueError(
+                "filename must resolve within the data directory"
+            ) from None
+        return filepath
+
     def save_data(self, filename: str, data: Dict[str, Any]) -> None:
         """Save data to a JSON file."""
-        filepath = self.data_dir / filename
+        filepath = self._resolve_path(filename)
         try:
             with open(filepath, "w", encoding="utf-8") as file:
                 json.dump(data, file, indent=2, ensure_ascii=False)
@@ -28,7 +40,7 @@ class FileHandler:
 
     def load_data(self, filename: str) -> Dict[str, Any]:
         """Load data from a JSON file."""
-        filepath = self.data_dir / filename
+        filepath = self._resolve_path(filename)
         try:
             with open(filepath, "r", encoding="utf-8") as file:
                 return json.load(file)
@@ -39,11 +51,11 @@ class FileHandler:
 
     def file_exists(self, filename: str) -> bool:
         """Check if a file exists in the data directory."""
-        return (self.data_dir / filename).exists()
+        return self._resolve_path(filename).exists()
 
     def delete_file(self, filename: str) -> None:
         """Delete a file from the data directory."""
-        filepath = self.data_dir / filename
+        filepath = self._resolve_path(filename)
         if filepath.exists():
             filepath.unlink()
 
