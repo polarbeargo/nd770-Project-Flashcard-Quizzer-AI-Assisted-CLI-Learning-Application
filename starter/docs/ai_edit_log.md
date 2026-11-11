@@ -319,6 +319,42 @@ checked against the current repository, not copied from an earlier snapshot.
 
 ---
 
+### 2026-11-11 - Constraining file-handler paths
+
+**Context:** A security review found that `FileHandler` joined caller-provided
+filenames to its data directory without ensuring the resolved path stayed
+inside that directory. Parent traversal, absolute paths, and symlinked parent
+directories could therefore target files elsewhere.
+
+**AI Tool Used:** GitHub Copilot (agent mode)
+
+**Prompt/Request:** "Review code quality, security, performance and error
+handling; then fix all reported security issues."
+
+**AI Response:** Confirmed the file-handler path escape and recommended
+resolving candidate paths against the resolved data directory before performing
+file operations.
+
+**Changes Made:**
+- Added one path-resolution guard shared by `save_data`, `load_data`,
+  `file_exists`, and `delete_file`. It rejects candidates whose resolved path
+  is outside the configured data directory, including symlinked parents.
+- Added regression coverage for traversal paths, absolute paths, and symlinked
+  parent-directory escapes across all four operations.
+
+**Reasoning:** Centralizing containment checks prevents each file operation
+from implementing its own path policy and ensures the check accounts for
+existing symlinks.
+
+**Outcome:** All 428 tests passed with 99.44% coverage. Black, isort, flake8,
+and mypy passed.
+
+**Lessons Learned:** A data-directory abstraction must enforce its boundary on
+every operation that accepts a filename; testing ordinary names alone does not
+verify that boundary.
+
+---
+
 ## Tips for Effective AI Collaboration
 
 ### 1. Be Specific in Your Requests

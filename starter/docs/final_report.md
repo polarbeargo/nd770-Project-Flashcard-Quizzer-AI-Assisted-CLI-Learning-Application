@@ -8,7 +8,7 @@
 
 This project is a Python command-line flashcard application. It loads and validates JSON decks, supports sequential, random, or adaptive quizzes, reports feedback and statistics, and exports JSON, CSV, or Markdown. It also supports configuration, logging, and bounded HTTP(S) deck loading. A `flashcards` package contains the core modules; `main.py` wires them to the CLI.
 
-I used GitHub Copilot as an implementation and review assistant. I supplied requirements, examined proposals, ran tests and static checks, and revised code when evidence or project constraints called for it. The latest full validation passed 416 tests with 99.43% coverage.
+I used GitHub Copilot as an implementation and review assistant. I supplied requirements, examined proposals, ran tests and static checks, and revised code when evidence or project constraints called for it. The latest full validation passed 428 tests with 99.44% coverage.
 
 ## Project Overview
 
@@ -75,7 +75,7 @@ AI suggestions were sometimes broader than needed, especially around patterns an
 
 ### Testing and Code Quality
 
-Pytest covers parsing, validation, loading, CLI commands, exporters, concurrency-sensitive components, quiz strategies, and a full JSON-load-to-quiz-session integration scenario. The latest run passed **416 tests** at **99.43% coverage**, above the 90% threshold. Black, isort, flake8, and mypy also passed in the same validation cycle. Application functions are typed; a narrow mypy exception remains for `Any` returned at the legacy JSON-loading boundary.
+Pytest covers parsing, validation, loading, CLI commands, exporters, concurrency-sensitive components, quiz strategies, a full JSON-load-to-quiz-session integration scenario, and file-handler path containment. The latest run passed **428 tests** at **99.44% coverage**, above the 90% threshold. Black, isort, flake8, and mypy also passed in the same validation cycle. Application functions are typed; a narrow mypy exception remains for `Any` returned at the legacy JSON-loading boundary.
 
 ### Design Patterns
 
@@ -107,8 +107,8 @@ Pytest covers parsing, validation, loading, CLI commands, exporters, concurrency
 
 ### Metrics
 
-- **Test suite:** 416 passed on the November 11, 2026 full run.
-- **Coverage:** 99.43% on that run (configured minimum: 90%).
+- **Test suite:** 428 passed on the November 11, 2026 full run.
+- **Coverage:** 99.44% on that run (configured minimum: 90%).
 - **Formatting, lint, and typing:** Black, isort, flake8, and mypy passed on November 11, 2026.
 - **Application structure:** Multiple focused modules plus a CLI entry point; no single-file application.
 
@@ -137,7 +137,7 @@ See [`ai_edit_log.md`](ai_edit_log.md) for the detailed interaction record, prom
 
 ### Appendix B: Code Statistics
 
-The November 11, 2026 full suite run reported 416 passing tests and 99.43% coverage. Black, isort, flake8, and mypy also passed in that validation cycle. Refresh these values after later code or test changes.
+The November 11, 2026 full suite run reported 428 passing tests and 99.44% coverage. Black, isort, flake8, and mypy also passed in that validation cycle. Refresh these values after later code or test changes.
 
 ### Appendix C: Additional Resources
 

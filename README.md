@@ -234,7 +234,7 @@ pre-commit install
 
 ## 🧪 Testing
 
-416 tests, **99 % line + branch coverage** (`fail_under = 90` is enforced in
+428 tests, **99 % line + branch coverage** (`fail_under = 90` is enforced in
 `pyproject.toml`), and **mutation-tested** so the coverage number means something:
 every non-cosmetic mutant of the loader, validator, exporters, remote fetcher
 and CLI is killed by at least one test (see *Mutation testing* below).
@@ -254,7 +254,7 @@ and CLI is killed by at least one test (see *Mutation testing* below).
 | `tests/test_logging_config.py` | Handler idempotency |
 | `tests/test_cli.py` | End-to-end CLI: every command, flag and failure mode |
 | `tests/test_concurrency.py` | 16-thread loads, event bus races, cache bounds, `tracemalloc` leak check |
-| `tests/test_task_manager.py`, `tests/test_file_handler.py` | Original starter utilities |
+| `tests/test_task_manager.py`, `tests/test_file_handler.py` | Original utilities; file-handler paths are constrained to the data directory |
 
 ```bash
 # Run all tests
