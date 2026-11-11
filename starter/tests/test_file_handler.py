@@ -73,3 +73,67 @@ class TestFileHandler:
         assert len(files) == 2
         assert "file1.json" in files
         assert "file2.json" in files
+
+    @pytest.mark.parametrize(
+        "operation",
+        [
+            lambda handler, filename: handler.save_data(filename, {"outside": True}),
+            lambda handler, filename: handler.load_data(filename),
+            lambda handler, filename: handler.file_exists(filename),
+            lambda handler, filename: handler.delete_file(filename),
+        ],
+    )
+    def test_file_operations_reject_parent_traversal(self, tmp_path, operation):
+        handler = FileHandler(str(tmp_path / "data"))
+        outside = tmp_path / "outside.json"
+        outside.write_text('{"inside": false}', encoding="utf-8")
+
+        with pytest.raises(ValueError, match="within the data directory"):
+            operation(handler, "../outside.json")
+
+        assert outside.read_text(encoding="utf-8") == '{"inside": false}'
+
+    @pytest.mark.parametrize(
+        "operation",
+        [
+            lambda handler, filename: handler.save_data(filename, {"outside": True}),
+            lambda handler, filename: handler.load_data(filename),
+            lambda handler, filename: handler.file_exists(filename),
+            lambda handler, filename: handler.delete_file(filename),
+        ],
+    )
+    def test_file_operations_reject_absolute_paths(self, tmp_path, operation):
+        handler = FileHandler(str(tmp_path / "data"))
+        outside = tmp_path / "outside.json"
+        outside.write_text('{"inside": false}', encoding="utf-8")
+
+        with pytest.raises(ValueError, match="within the data directory"):
+            operation(handler, str(outside))
+
+        assert outside.read_text(encoding="utf-8") == '{"inside": false}'
+
+    @pytest.mark.parametrize(
+        "operation",
+        [
+            lambda handler, filename: handler.save_data(filename, {"outside": True}),
+            lambda handler, filename: handler.load_data(filename),
+            lambda handler, filename: handler.file_exists(filename),
+            lambda handler, filename: handler.delete_file(filename),
+        ],
+    )
+    def test_file_operations_reject_symlinked_parent_escape(self, tmp_path, operation):
+        data_dir = tmp_path / "data"
+        handler = FileHandler(str(data_dir))
+        outside_dir = tmp_path / "outside"
+        outside_dir.mkdir()
+        outside = outside_dir / "outside.json"
+        outside.write_text('{"inside": false}', encoding="utf-8")
+        try:
+            (data_dir / "linked").symlink_to(outside_dir, target_is_directory=True)
+        except (NotImplementedError, OSError) as exc:
+            pytest.skip(f"symlinks are unavailable: {exc}")
+
+        with pytest.raises(ValueError, match="within the data directory"):
+            operation(handler, "linked/outside.json")
+
+        assert outside.read_text(encoding="utf-8") == '{"inside": false}'
