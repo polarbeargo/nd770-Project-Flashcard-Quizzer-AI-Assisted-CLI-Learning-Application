@@ -278,6 +278,47 @@ the immutable deck can safely be reused.
 
 ---
 
+### 2026-11-11 - Full-session integration coverage and documentation links
+
+**Context:** Review the requested loader, quiz-mode and full-session scenarios
+for meaningful behavioral coverage. The existing suite covered loader and
+strategy behavior, but lacked one integration test checking the statistics
+from a complete three-question session.
+
+**AI Tool Used:** GitHub Copilot (agent mode)
+
+**Prompt/Request:** "Check whether these scenarios are implemented in a
+not-test-theater manner, implement the missing part, and check whether the
+README and architecture documentation need updates."
+
+**AI Response:** Identified the missing exact three-question stats scenario,
+added an integration test that loads a JSON deck through `FlashcardLoader` and
+runs a real `QuizSession`, then reviewed README links and architecture scope.
+
+**Changes Made:**
+- Added `tests/test_integration.py::test_full_session`, which submits one
+  incorrect and two correct answers, then checks the result object and printed
+  three-question summary, including 66.7% accuracy and the missed term.
+- Updated the root README's test count and test-file overview, corrected its
+  links to the docs under `starter/docs/`, and removed the broken license link
+  because the repository has no license file.
+- Renamed the architecture document title to "Architecture: Flashcard Quizzer"
+  to reflect its coverage of quiz strategies and exports as well as loading.
+
+**Reasoning:** A real loader-to-session test verifies the integration path and
+its externally observable statistics, rather than only testing helpers in
+isolation. Documentation links and test descriptions should match the files
+that actually exist.
+
+**Outcome:** The full starter test suite passed: 416 tests. The three-question
+integration test checks both exact result values and the rendered summary.
+
+**Lessons Learned:** A suite can have detailed unit tests and still miss an
+important end-to-end output shape. README file counts and links also need to be
+checked against the current repository, not copied from an earlier snapshot.
+
+---
+
 ## Tips for Effective AI Collaboration
 
 ### 1. Be Specific in Your Requests

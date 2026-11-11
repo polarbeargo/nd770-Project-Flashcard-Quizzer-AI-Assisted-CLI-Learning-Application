@@ -1,4 +1,4 @@
-# Architecture: Flashcard Loading & Validation
+# Architecture: Flashcard Quizzer
 
 This document explains how the `flashcards` package is put together, which
 design patterns it uses and *why*, and the performance, security and
@@ -13,10 +13,15 @@ flowchart LR
         B --> C["FlashcardLoader"]
         C --> D{"command"}
         D -->|"validate or show"| E["print summary"]
+        D -->|"quiz"| Q["QuizSession"]
         D -->|"export"| F["export_deck"]
     end
 
     subgraph Package["flashcards package"]
+        Q --> QM["QuizModeFactory"]
+        QM --> QS["SequentialMode"]
+        QM --> QR["RandomMode"]
+        QM --> QA["AdaptiveMode"]
         C --> G["ParserRegistry<br/>Strategy and Chain of Responsibility"]
         G --> H["ArrayFormatParser"]
         G --> I["ObjectFormatParser"]
@@ -48,6 +53,7 @@ flowchart LR
 | `exporters.py` | JSON/CSV/Markdown exporters + atomic file writing |
 | `remote.py` | Hardened HTTP(S) download |
 | `logging_config.py` | Idempotent logging setup |
+| `quiz.py` | Quiz strategies, factory, isolated session state and result summary |
 
 ## 2. Load pipeline
 
@@ -150,6 +156,29 @@ classDiagram
     FlashcardLoader --> EventBus
     FlashcardLoader --> LRUCache
     FlashcardLoader --> LoaderConfig
+
+    class QuizMode {
+        <<abstract>>
+        +start(cards)
+        +next_card() Flashcard
+        +record_answer(card, correct)
+    }
+    class SequentialMode
+    class RandomMode
+    class AdaptiveMode
+    class QuizModeFactory {
+        +available() tuple
+        +create(name) QuizMode
+    }
+    class QuizSession {
+        +run(input_fn, out) QuizResult
+    }
+    QuizMode <|-- SequentialMode
+    QuizMode <|-- RandomMode
+    QuizMode <|-- AdaptiveMode
+    QuizModeFactory ..> QuizMode : creates
+    QuizSession --> QuizMode : delegates ordering
+    QuizSession --> Deck : reads immutable cards
 ```
 
 | Pattern | Where | Problem it solves |
@@ -159,6 +188,8 @@ classDiagram
 | **Factory** | `ExporterFactory` | Resolves a format name or file extension to a concrete exporter; the CLI never imports exporter classes. Supports registration of custom exporters (tested). |
 | **Observer** | `EventBus` | The loader reports skipped cards, duplicates, cache hits etc. without knowing about stdout or logging. The CLI subscribes a warning printer; logging subscribes `log_event`; tests subscribe `CollectingObserver`. |
 | **Facade** | `FlashcardLoader` | One object hides read → parse → detect → validate → dedupe → cache. |
+| **Strategy** | `QuizMode` and its three implementations | The quiz loop delegates card ordering and retry policy, keeping interaction and scoring independent from question selection. |
+| **Factory** | `QuizModeFactory` | Validates a mode name and creates a fresh strategy instance for each quiz. The CLI does not branch on strategy implementation. |
 | **Immutable value object** | `LoaderConfig`, `Flashcard`, `Deck` | Safe to share across threads and cache without copying. |
 
 ### Rejected: Singleton for configuration
@@ -167,6 +198,14 @@ The design-pattern guide suggests a Singleton `ConfigManager`. It was rejected
 because (a) global state makes tests order-dependent, (b) it hides the
 dependency, and (c) a frozen dataclass passed into the loader gives the same
 "one shared config" benefit without the downsides. See the AI edit log.
+
+Quiz strategy instances are mutable only for the lifetime of a quiz and are
+created per session. A random strategy owns its own `random.Random` instance;
+the immutable deck can be shared, but mutable strategy/session objects are not
+shared between concurrent quizzes. Adaptive mode makes one initial pass, then
+uses a queue to retry misses until correct. The user can enter `q` to stop;
+the queue contains at most one pending retry per incorrect response and no
+deck data is mutated.
 
 ## 4. Error-handling contract
 
