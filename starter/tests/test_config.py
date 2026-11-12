@@ -43,7 +43,9 @@ class TestDefaultsAndValidation:
         with pytest.raises(ConfigError, match="on_invalid_card"):
             LoaderConfig(on_invalid_card="explode")
 
-    @pytest.mark.parametrize("bad", [0, -2, "5", True])
+    @pytest.mark.parametrize(
+        "bad", [0, -2, "5", True, float("nan"), float("inf"), float("-inf")]
+    )
     def test_timeout_must_be_positive_number(self, bad):
         with pytest.raises(ConfigError, match="request_timeout"):
             LoaderConfig(request_timeout=bad)
