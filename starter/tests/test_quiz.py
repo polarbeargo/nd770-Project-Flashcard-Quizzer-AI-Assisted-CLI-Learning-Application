@@ -36,9 +36,12 @@ def deck(cards: tuple[Flashcard, ...]) -> Deck:
 def collect(mode: QuizMode, cards: tuple[Flashcard, ...]) -> list[Flashcard]:
     mode.start(cards)
     result = []
-    while (card := mode.next_card()) is not None:
+    for _ in range(len(cards) + 1):
+        card = mode.next_card()
+        if card is None:
+            return result
         result.append(card)
-    return result
+    raise AssertionError("quiz mode did not finish after presenting its cards")
 
 
 def test_sequential_mode_returns_cards_once_in_order(cards):
@@ -56,10 +59,7 @@ def test_sequential_mode_can_be_restarted(cards):
 def test_random_mode_shuffles_a_copy_and_returns_each_card(cards):
     mode = RandomMode(random.Random(4))
     original = list(cards)
-    mode.start(original)
-    shuffled = []
-    while (card := mode.next_card()) is not None:
-        shuffled.append(card)
+    shuffled = collect(mode, cards)
 
     assert set(shuffled) == set(cards)
     assert len(shuffled) == len(cards)
