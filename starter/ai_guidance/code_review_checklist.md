@@ -158,6 +158,23 @@ Before diving into the code, ask yourself:
 2. Test edge cases and error conditions
 3. Verify integration with existing code
 
+## Project Review Record - November 12, 2026
+
+The checklist was applied to the application modules and the original file
+utility during code review. Findings and follow-up decisions are recorded in
+`docs/ai_edit_log.md`.
+
+| Checklist area | Review evidence and result |
+|---|---|
+| Correctness, input validation, and edge cases | Reviewed loader, parser, validator, quiz, and config behavior against boundary and failure tests. Found that text size limits counted characters for strings/streams and that non-finite request timeouts were accepted; both were fixed and regression-tested. |
+| Security and data handling | Checked path handling, remote URL restrictions, and CSV export. Found that `FileHandler` accepted paths outside its data directory, including symlinked parents; added containment checks and traversal, absolute-path, and symlink tests for save/load/existence/delete. |
+| Code quality, readability, and conventions | Reviewed module responsibilities, public APIs, docstrings, formatting, imports, lint, and types. Black, isort, flake8, and mypy passed after the fixes. |
+| Performance and resource handling | Verified bounded LRU caching, capped file/remote reads, a single validation pass, and cleanup of export temporary files. Mutation tests also exposed quiz-mode test loops that could hang on a non-terminating mutant; bounded the test helper so it fails promptly. |
+| Error handling and integration | Checked loader/export/config error paths and the CLI's user-facing handling. Added byte-limit and timeout errors through the existing exception paths; the complete pytest suite passed after the changes. |
+
+This is a project-level review record, not a claim that every checklist item
+applies to every module (for example, database-specific items do not apply).
+
 ### Step 4: Documentation
 1. Record any issues found
 2. Document changes made

@@ -355,6 +355,55 @@ verify that boundary.
 
 ---
 
+### 2026-11-12 - Checklist review and input-boundary hardening
+
+**Context:** A project-quality review against the provided checklist identified
+two robustness gaps in addition to the previously fixed file-path escape:
+string/stream size limits counted characters rather than bytes, and
+`request_timeout` accepted `NaN` and infinity.
+
+**AI Tool Used:** GitHub Copilot (agent mode)
+
+**Prompt/Request:** "Review code quality, security, performance and error
+handling; make the code more maintainable and robust, and address the review
+gaps before submission."
+
+**AI Response:** Verified the three input-boundary issues, reviewed the
+application against the checklist categories, and recommended regression tests
+for their observable failure cases.
+
+**Changes Made:**
+- Counted UTF-8 bytes for in-memory strings and text streams. File loading now
+  reads a capped number of raw bytes before decoding, preserving exact byte
+  limits for configured file encodings and handling files that grow after
+  `stat()`.
+- Required request timeouts to be finite and positive; added `NaN` and positive
+  and negative infinity to the invalid-value tests.
+- Bounded the quiz-mode test collector so an incorrect mode that repeats
+  forever fails promptly instead of timing out.
+- Added a project review record to the provided checklist and this log. It
+  cites the file-path escape, byte-limit and timeout findings, the tests that
+  caught them, and formatting/lint/type-check results.
+- Refreshed the interaction count below to reflect the dated project entries.
+
+**Reasoning:** Resource limits need to measure the resource named by the
+configuration (bytes), and a network timeout must be a finite positive value.
+Bounded test loops make mutation feedback faster and less ambiguous.
+
+**Outcome:** The full suite passed 433 tests at 99.17% coverage. Black, isort,
+flake8, and mypy passed. A fresh mutation run generated 1,902 mutants: 1,530
+killed, 370 survived, 2 suspicious, and no timeouts after the quiz test loop
+was bounded. The two suspicious cases involve injected opener/fetcher fallback
+behavior and remain explicitly unclassified by mutmut; the other survivors
+have not all been manually triaged. The README and final report state these
+limitations rather than treating survivors as equivalent.
+
+**Lessons Learned:** A high coverage percentage does not verify units at input
+boundaries or every non-finite numeric value. Runtime probes and targeted
+regression tests exposed these cases.
+
+---
+
 ## Tips for Effective AI Collaboration
 
 ### 1. Be Specific in Your Requests
@@ -415,9 +464,9 @@ As you work through the project, consider these questions:
 
 ## Summary Statistics
 
-As of 2026-10-31 (initial implementation):
+As of 2026-11-12:
 
-- **Total AI interactions:** 7 major sessions (architecture, loader, error handling, tests, security, quality tooling, mutation testing), each with several follow-up prompts
+- **Documented project interactions:** 11 dated entries, excluding the 2024 example template; some entries cover multiple follow-up prompts
 - **Lines of AI-generated code used:** ~1 900 lines in `flashcards/` + `main.py`, ~3 000 lines of tests
 - **Lines of AI-generated code modified:** ~60 lines rejected or rewritten (URL routing, control-char regex, two tests, Singleton proposal, SSRF code declined)
 - **Most helpful AI interaction:** Triaging 394 mutation-testing survivors into cosmetic vs. real gaps and writing targeted tests for the ~30 real ones

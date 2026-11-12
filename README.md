@@ -3,8 +3,9 @@
 A command-line tool that **loads, validates, quizzes and exports flashcard decks** stored
 as JSON. It was built with an AI coding assistant as part of an AI-assisted
 software-engineering project; the collaboration process is documented in
-[`starter/docs/ai_edit_log.md`](starter/docs/ai_edit_log.md) and the design in
-[`starter/docs/architecture.md`](starter/docs/architecture.md).
+[`starter/docs/ai_edit_log.md`](starter/docs/ai_edit_log.md), the design in
+[`starter/docs/architecture.md`](starter/docs/architecture.md), and the
+project outcomes in [`starter/docs/final_report.md`](starter/docs/final_report.md).
 
 ## ✨ Features
 
@@ -234,10 +235,9 @@ pre-commit install
 
 ## 🧪 Testing
 
-428 tests, **99 % line + branch coverage** (`fail_under = 90` is enforced in
-`pyproject.toml`), and **mutation-tested** so the coverage number means something:
-every non-cosmetic mutant of the loader, validator, exporters, remote fetcher
-and CLI is killed by at least one test (see *Mutation testing* below).
+433 tests, **99 % line + branch coverage** (`fail_under = 90` is enforced in
+`pyproject.toml`). Mutation testing has been used to find test gaps; current
+results and unresolved survivors are reported in *Mutation testing* below.
 
 | File | Covers |
 |------|--------|
@@ -285,12 +285,14 @@ mutmut results        # list survivors
 mutmut show <id>      # diff of one mutant
 ```
 
-Running this on the first version of the suite exposed four tautological
-assertions and ~30 unverified behaviours (boundary conditions, config
-propagation, error metadata, log levels) despite 99 % coverage. Tests were
-added for each; see `docs/ai_edit_log.md` for the full account. The remaining
-survivors are cosmetic (help-text wording, message capitalisation) or
-provably equivalent.
+An initial run exposed four tautological assertions and about 30 unverified
+behaviours despite high coverage; targeted tests were added, as recorded in
+`docs/ai_edit_log.md`. A fresh run on November 12, 2026 generated 1,902 mutants:
+1,530 were killed, 370 survived, 2 were marked suspicious, and none timed out
+after bounding the quiz-mode test loops. The two suspicious cases alter
+injected-opener/fetcher fallback behavior; relevant tests exist, but mutmut did
+not classify them as killed. The 370 survivors have not all been individually
+triaged and must not be assumed equivalent or cosmetic.
 
 ## Project Instructions
 

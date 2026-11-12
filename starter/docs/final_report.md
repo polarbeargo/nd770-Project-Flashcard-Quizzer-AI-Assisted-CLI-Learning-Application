@@ -1,14 +1,14 @@
 # AI-Assisted Development Project Report
 
-**Student Name:** Not provided  
+**Student Name:** Hsin-Wen Chang
 **Project Title:** Flashcard Quizzer - AI-Assisted CLI Learning Application  
-**Date:** November 11, 2026
+**Date:** November 12, 2026
 
 ## Executive Summary
 
-This project is a Python command-line flashcard application. It loads and validates JSON decks, supports sequential, random, or adaptive quizzes, reports feedback and statistics, and exports JSON, CSV, or Markdown. It also supports configuration, logging, and bounded HTTP(S) deck loading. A `flashcards` package contains the core modules; `main.py` wires them to the CLI.
+This Python CLI loads and validates JSON flashcard decks, supports sequential, random, or adaptive quizzes, reports scores, and exports JSON, CSV, or Markdown. It also offers configuration, logging, and bounded HTTP(S) loading.
 
-I used GitHub Copilot as an implementation and review assistant. I supplied requirements, examined proposals, ran tests and static checks, and revised code when evidence or project constraints called for it. The latest full validation passed 428 tests with 99.44% coverage.
+I used GitHub Copilot as an implementation and review assistant, directing changes with explicit requirements and validating them rather than accepting proposals uncritically. The November 12 validation passed 433 tests with 99.17% coverage.
 
 ## Project Overview
 
@@ -35,7 +35,7 @@ The loader supports a card array or an object containing a `cards` array. Valida
 
 ### AI Tools and Workflow
 
-The project log records GitHub Copilot assistance. My workflow was to state behavior and constraints, inspect the code, request a focused change, and validate it with tests and quality tools. I reviewed generated code for correctness, compatibility, maintainability, and edge cases rather than assuming it was correct.
+The project log records 11 dated development interactions. I used the provided checklist to review correctness, input validation, security, performance, error handling, readability, and integration, then ran tests and static checks.
 
 ### Valuable Interactions
 
@@ -64,8 +64,8 @@ The project log records GitHub Copilot assistance. My workflow was to state beha
 **Context:** Decks are user input, and exported CSV can be opened in spreadsheets.  
 **AI Prompt:** Review relevant input/export risks for a local CLI.  
 **AI Response:** Add size limits, URL restrictions, validation, CSV formula neutralization, and atomic writes.  
-**My Changes:** Declined unnecessary private-network blocking and preserved legitimate newlines.  
-**Outcome:** Protections match the threat model.
+**My Changes:** Declined unnecessary private-network blocking and preserved legitimate newlines. A later review found and fixed file-path traversal in the original file utility.
+**Outcome:** Protections match the threat model; the path fix has traversal, absolute-path, and symlink regression tests.
 
 ### Challenges with AI Collaboration
 
@@ -75,7 +75,7 @@ AI suggestions were sometimes broader than needed, especially around patterns an
 
 ### Testing and Code Quality
 
-Pytest covers parsing, validation, loading, CLI commands, exporters, concurrency-sensitive components, quiz strategies, a full JSON-load-to-quiz-session integration scenario, and file-handler path containment. The latest run passed **428 tests** at **99.44% coverage**, above the 90% threshold. Black, isort, flake8, and mypy also passed in the same validation cycle. Application functions are typed; a narrow mypy exception remains for `Any` returned at the legacy JSON-loading boundary.
+Pytest covers parsing, validation, loading, CLI commands, exporters, concurrency-sensitive components, quiz strategies, integration behavior, and file-handler path containment. The latest run passed **433 tests** at **99.17% coverage**, above the 90% threshold. Black, isort, flake8, and mypy also passed. Regression tests now verify byte-based text limits and finite positive timeouts. A fresh mutation run killed 1,530 of 1,902 mutants; 370 survived and 2 were marked suspicious, so those results are not presented as a complete mutation pass.
 
 ### Design Patterns
 
@@ -107,9 +107,10 @@ Pytest covers parsing, validation, loading, CLI commands, exporters, concurrency
 
 ### Metrics
 
-- **Test suite:** 428 passed on the November 11, 2026 full run.
-- **Coverage:** 99.44% on that run (configured minimum: 90%).
-- **Formatting, lint, and typing:** Black, isort, flake8, and mypy passed on November 11, 2026.
+- **Test suite:** 433 passed on the November 12, 2026 full run.
+- **Coverage:** 99.17% on that run (configured minimum: 90%).
+- **Formatting, lint, and typing:** Black, isort, flake8, and mypy passed on November 12, 2026.
+- **Mutation testing:** 1,530 killed; 370 survived; 2 suspicious; 0 timeouts (1,902 total). Survivors are not all triaged.
 - **Application structure:** Multiple focused modules plus a CLI entry point; no single-file application.
 
 ### Self-Assessment
@@ -137,15 +138,13 @@ See [`ai_edit_log.md`](ai_edit_log.md) for the detailed interaction record, prom
 
 ### Appendix B: Code Statistics
 
-The November 11, 2026 full suite run reported 428 passing tests and 99.44% coverage. Black, isort, flake8, and mypy also passed in that validation cycle. Refresh these values after later code or test changes.
+The November 12, 2026 full suite run reported 433 passing tests and 99.17% coverage. Black, isort, flake8, and mypy also passed. The mutation run generated 1,902 mutants (1,530 killed, 370 survived, 2 suspicious, no timeouts); survivors remain to be triaged. Refresh these figures after later code or test changes.
 
 ### Appendix C: Additional Resources
 
-- Project setup and examples: [`../README.md`](../README.md)
+- Project setup and examples: [`README.md`](../../README.md)
 - Architecture and design decisions: [`architecture.md`](architecture.md)
 - AI collaboration record: [`ai_edit_log.md`](ai_edit_log.md)
 - Python standard library documentation for `argparse`, `json`, and `unittest` concepts used alongside pytest
 
 ---
-
-**Report length:** Approximately 1,300 words, excluding headings and metadata.
