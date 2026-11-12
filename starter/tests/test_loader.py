@@ -439,10 +439,44 @@ class TestBoundariesAndPropagation:
             == 1
         )
 
+    def test_string_size_limit_counts_utf8_bytes(self):
+        text = json.dumps([{"front": "\u00e9", "back": "A"}], ensure_ascii=False)
+        byte_size = len(text.encode("utf-8"))
+        assert (
+            len(
+                FlashcardLoader(LoaderConfig(max_file_bytes=byte_size)).load_string(
+                    text
+                )
+            )
+            == 1
+        )
+
+        with pytest.raises(FileTooLargeError):
+            FlashcardLoader(LoaderConfig(max_file_bytes=byte_size - 1)).load_string(
+                text
+            )
+
     def test_stream_exactly_at_size_limit_loads(self):
         text = json.dumps([{"front": "Q", "back": "A"}])
         loader = FlashcardLoader(LoaderConfig(max_file_bytes=len(text)))
         assert len(loader.load_stream(io.StringIO(text))) == 1
+
+    def test_stream_size_limit_counts_utf8_bytes(self):
+        text = json.dumps([{"front": "\u00e9", "back": "A"}], ensure_ascii=False)
+        byte_size = len(text.encode("utf-8"))
+        assert (
+            len(
+                FlashcardLoader(LoaderConfig(max_file_bytes=byte_size)).load_stream(
+                    io.StringIO(text)
+                )
+            )
+            == 1
+        )
+
+        with pytest.raises(FileTooLargeError):
+            FlashcardLoader(LoaderConfig(max_file_bytes=byte_size - 1)).load_stream(
+                io.StringIO(text)
+            )
 
     def test_deck_exactly_at_card_limit_loads(self):
         loader = FlashcardLoader(LoaderConfig(max_cards=2))
