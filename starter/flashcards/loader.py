@@ -183,22 +183,26 @@ class FlashcardLoader:
             return cached
 
         try:
-            with file_path.open("r", encoding=self._config.encoding) as handle:
-                text = handle.read(self._config.max_file_bytes + 1)
+            with file_path.open("rb") as handle:
+                content = handle.read(self._config.max_file_bytes + 1)
         except PermissionError:
             raise FileAccessError(f"Permission denied reading {source!r}.") from None
+        except OSError as exc:
+            raise FileAccessError(
+                f"Could not read {source!r}: {exc.strerror}."
+            ) from None
+
+        self._check_size(len(content), source)
+        try:
+            text = content.decode(self._config.encoding)
         except UnicodeDecodeError:
             raise MalformedJSONError(
                 f"The file {source!r} is not valid {self._config.encoding} text.",
                 hint="Save the file as UTF-8, or set 'encoding' in the config.",
                 source=source,
             ) from None
-        except OSError as exc:
-            raise FileAccessError(
-                f"Could not read {source!r}: {exc.strerror}."
-            ) from None
 
-        deck = self.load_string(text, source=source)
+        deck = self._parse_string(text, source)
         self._cache.put(cache_key, deck)
         return deck
 
@@ -223,13 +227,18 @@ class FlashcardLoader:
             max_bytes=self._config.max_file_bytes,
             encoding=self._config.encoding,
         )
-        return self.load_string(text, source=url)
+        self._check_text_size(text, url, self._config.encoding)
+        return self._parse_string(text, url)
 
     def load_string(self, text: str, *, source: str = "<string>") -> Deck:
         """Parse JSON text and build a validated deck."""
         if not isinstance(text, str):
             raise TypeError("text must be a str")
-        self._check_size(len(text), source)
+        self._check_text_size(text, source, "utf-8")
+        return self._parse_string(text, source)
+
+    def _parse_string(self, text: str, source: str) -> Deck:
+        """Parse text whose encoded size has already been checked."""
         if not text.strip():
             raise MalformedJSONError(
                 "The input is empty.",
@@ -334,6 +343,16 @@ class FlashcardLoader:
                 f"The input is {size:,} bytes; the limit is {limit:,} bytes.",
                 source=source,
             )
+
+    def _check_text_size(self, text: str, source: str, encoding: str) -> None:
+        try:
+            size = len(text.encode(encoding))
+        except UnicodeEncodeError:
+            raise MalformedJSONError(
+                f"The input contains text that cannot be encoded as {encoding}.",
+                source=source,
+            ) from None
+        self._check_size(size, source)
 
     def _publish(
         self, kind: EventKind, message: str, source: str, index: Optional[int] = None
