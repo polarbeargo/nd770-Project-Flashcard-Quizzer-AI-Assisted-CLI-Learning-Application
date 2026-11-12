@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import math
 import os
 from dataclasses import dataclass, fields
 from pathlib import Path
@@ -82,8 +83,14 @@ class LoaderConfig:
             self.request_timeout, bool
         ):
             raise ConfigError("'request_timeout' must be a number.")
-        if self.request_timeout <= 0:
-            raise ConfigError("'request_timeout' must be greater than zero.")
+        try:
+            valid_timeout = math.isfinite(self.request_timeout) and (
+                self.request_timeout > 0
+            )
+        except OverflowError:
+            valid_timeout = False
+        if not valid_timeout:
+            raise ConfigError("'request_timeout' must be finite and greater than zero.")
         for name in ("dedupe", "allow_empty"):
             if not isinstance(getattr(self, name), bool):
                 raise ConfigError(f"'{name}' must be true or false.")
